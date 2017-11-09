@@ -30,6 +30,8 @@ namespace CouponClient
 
         public Models.DownloadHandler downloadHandler;
 
+        public Models.JsDialogHandler jsDialogHandler;
+
         public Models.BuyUserInfo dlProxy;
 
         private Models.JdCidUrl[] cidLinks = Bll.Jd.AllCids;
@@ -86,13 +88,29 @@ namespace CouponClient
             downloadHandler.OnDownloading += DownloadHandler_OnDownloading;
             downloadHandler.OnDownloadComplete += DownloadHandler_OnDownloadComplete;
             var url = LOGIN_URL;
-
+            jsDialogHandler = new Models.JsDialogHandler();
+            jsDialogHandler.OnJSDialogShow += JsDialogHandler_OnJSDialogShow;
             chrome = new ChromiumWebBrowser(url);
             chrome.FrameLoadEnd += Chrome_FrameLoadEnd;
             chrome.AddressChanged += Chrome_AddressChanged;
             chrome.Dock = DockStyle.Fill;
             chrome.DownloadHandler = downloadHandler;
+            chrome.JsDialogHandler = jsDialogHandler;
             plChrome.Controls.Add(chrome);
+        }
+
+        private void JsDialogHandler_OnJSDialogShow(string message)
+        {
+            chrome.ExecuteScriptAsync("setTimeout(function () { $('#getcode-btn').click() }, 1000);");
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F12)
+            {
+                chrome.ShowDevTools();
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         public List<Models.Coupon> TempCoupon { get; set; } = new List<Models.Coupon>();
@@ -166,11 +184,12 @@ namespace CouponClient
         private void Chrome_FrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
             var url = e.Url.ToLower();
-          
             if (url.Contains(GOTOADV_URL))
             {
                 //防止加载过快问题
-                chrome.ExecuteScriptAsync("window.alert = function (message) { if (message == '下载速度太快，请稍候再试！') { setTimeout(function () { $('#getcode-btn').click() }, 1000) } }");
+                //chrome.ExecuteScriptAsync("window.alert = function (message) { if (message == '下载速度太快，请稍候再试！') { setTimeout(function () { $('#getcode-btn').click() }, 1000) } }");
+                //chrome.ExecuteScriptAsync("window.alert = function (message) { if (message == '下载速度太快，请稍后再试！') { setTimeout(function () { $('body').css('color', 'red') }, 1000); } else { $('body').css('color', 'green'); $('body').append(message); } }");
+                chrome.ExecuteScriptAsync("$('#ifile')[0].contentWindow.alert = function (message) { console.log(message) };");
                 //chrome.ExecuteScriptAsync("alert('下载速度太快，请稍候再试！')");
                 Download();
 
@@ -236,10 +255,10 @@ namespace CouponClient
             else
             {
                 //回避下载过快问题
-              
+
                 chrome.ExecuteScriptAsync($"pageClick({Page.Number + 1})");
             }
-            Thread.Sleep(5000);
+            //Thread.Sleep(5000);
             fileInfo.Delete();
         }
 
@@ -367,6 +386,11 @@ namespace CouponClient
             {
                 chrome.Load(txtAddress.Text);
             }
+        }
+
+        private void btnReload_Click(object sender, EventArgs e)
+        {
+            chrome.Load(LOGIN_URL);
         }
     }
 }

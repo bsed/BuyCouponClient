@@ -56,6 +56,7 @@
             this.btnReload.Name = "btnReload";
             this.btnReload.Size = new System.Drawing.Size(36, 22);
             this.btnReload.Text = "重启";
+            this.btnReload.Click += new System.EventHandler(this.btnReload_Click);
             // 
             // txtAddress
             // 

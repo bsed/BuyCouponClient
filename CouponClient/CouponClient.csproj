@@ -176,6 +176,7 @@
     <Compile Include="Models\DownloadHandler.cs" />
     <Compile Include="Models\Enums.cs" />
     <Compile Include="Models\JdModels.cs" />
+    <Compile Include="Models\JsDialogHandler.cs" />
     <Compile Include="Models\StateLog.cs" />
     <Compile Include="Models\UserInfo.cs" />
     <Compile Include="Program.cs" />
