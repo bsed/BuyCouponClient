@@ -241,6 +241,5 @@ CouponClient/bin/Debug
 CouponClient/bin/x86/Debug/app.publish
 CouponClient/bin/x86/Debug/temp
 CouponClient/bin/x86/Debug/CouponClient.*
-CouponClient/bin/x86/Debug/mgjCids.json
-CouponClient/bin/x86/Debug/StateLog.json
+CouponClient/bin/x86/Debug/*.json
 /Setup/Debug
