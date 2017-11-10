@@ -158,11 +158,22 @@ namespace CouponClient
         private void Chrome_FrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
             var url = e.Url;
-            chrome.ExecuteScriptAsync(File.ReadAllText($"{System.Environment.CurrentDirectory}\\jquery-3.2.1.min.js"));
-            //if (url.Contains("https://login.taobao.com/member/login.jhtml"))
-            //{
-            //    //chrome.ExecuteScriptAsync("$('#TPL_username_1').val('');$('#TPL_password_1').val('');");
-            //}
+            try
+            {
+                string path = $"{System.Environment.CurrentDirectory}\\jquery-3.2.1.min.js";
+                if (File.Exists(path))
+                {
+                    chrome.ExecuteScriptAsync(File.ReadAllText($"{System.Environment.CurrentDirectory}\\jquery-3.2.1.min.js"));
+                }
+                else
+                {
+                    OnStateChange.Invoke(Enums.StateLogType.TaoBaoCouponUploadFail, $"jquey不存在");
+                }
+            }
+            catch (Exception ex)
+            {
+                OnStateChange.Invoke(Enums.StateLogType.TaoBaoCouponUploadFail, $"jquey加载失败{ex.Message}");
+            }
             if (url.Contains(COUPON_DOWNLOAD_URL))
             {
                 Download();

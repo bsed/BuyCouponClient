@@ -65,7 +65,6 @@ namespace CouponClient
             frmLogin.ShowDialog();
             tab.SelectedTab = tabTaoBao;
             tab.TabPages.Remove(tabJd);
-            //tabJd.Visible = false;
             MonitorNetworkSpeed.NetworkSpeedChanged += MonitorNetworkSpeed_NetworkSpeedChanged;
 
         }
@@ -191,10 +190,9 @@ namespace CouponClient
             Config.ConfigSetting.Password = "";
             Config.ConfigSetting = Config.ConfigSetting;
             this.Hide();
-
-            frmLogin.ShowDialog();
             EnableRun = false;
             frmLogin.Logout();
+            frmLogin.ShowDialog();
         }
 
         private void menuClose_Click(object sender, EventArgs e)

@@ -33,6 +33,8 @@ namespace CouponClient
                 Thread.Sleep(1000);
                 sent = performanceCounterSent.NextValue();
                 received = performanceCounterReceived.NextValue();
+                Task task = new Task(()=> { Run(); });
+                task.Start();
             }
             catch (Exception ex)
             {
@@ -40,7 +42,6 @@ namespace CouponClient
                 received = 0;
             }
             NetworkSpeedChanged?.Invoke(sent, received);
-            Run();
         }
 
         public delegate void NetworkSpeedChangedHander(float sent, float received);
