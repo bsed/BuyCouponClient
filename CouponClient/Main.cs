@@ -190,10 +190,9 @@ namespace CouponClient
             Config.ConfigSetting.Password = "";
             Config.ConfigSetting = Config.ConfigSetting;
             this.Hide();
-
-            frmLogin.ShowDialog();
             EnableRun = false;
             frmLogin.Logout();
+            frmLogin.ShowDialog();
         }
 
         private void menuClose_Click(object sender, EventArgs e)
@@ -203,24 +202,32 @@ namespace CouponClient
 
         private void MonitorNetworkSpeed_NetworkSpeedChanged(float sent, float received)
         {
-            string strSent, strReceived;
-            if (sent / Math.Pow(1024, 2) > 1)
+            try
             {
-                strSent = $"{Math.Round(sent / Math.Pow(1024, 2), 2)}Mb/s";
+                string strSent, strReceived;
+                if (sent / Math.Pow(1024, 2) > 1)
+                {
+                    strSent = $"{Math.Round(sent / Math.Pow(1024, 2), 2)}Mb/s";
+                }
+                else
+                {
+                    strSent = $"{Math.Round(sent / Math.Pow(1024, 1), 2)}Kb/s";
+                }
+                if (received / Math.Pow(1024, 2) > 1)
+                {
+                    strReceived = $"{Math.Round(received / Math.Pow(1024, 2), 2)}Mb/s";
+                }
+                else
+                {
+                    strReceived = $"{Math.Round(received / Math.Pow(1024, 1), 2)}Kb/s";
+                }
+                SetSpeed($"{strReceived}↓ {strSent}↑ ");
             }
-            else
+            catch (Exception)
             {
-                strSent = $"{Math.Round(sent / Math.Pow(1024, 1), 2)}Kb/s";
+                
             }
-            if (received / Math.Pow(1024, 2) > 1)
-            {
-                strReceived = $"{Math.Round(received / Math.Pow(1024, 2), 2)}Mb/s";
-            }
-            else
-            {
-                strReceived = $"{Math.Round(received / Math.Pow(1024, 1), 2)}Kb/s";
-            }
-            SetSpeed($"{strReceived}↓ {strSent}↑ ");
+            
         }
 
 
