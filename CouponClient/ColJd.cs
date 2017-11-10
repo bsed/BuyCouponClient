@@ -99,9 +99,18 @@ namespace CouponClient
             plChrome.Controls.Add(chrome);
         }
 
+        /// <summary>
+        /// 拦截警告
+        /// </summary>
+        /// <param name="message"></param>
         private void JsDialogHandler_OnJSDialogShow(string message)
         {
-            chrome.ExecuteScriptAsync("setTimeout(function () { $('#getcode-btn').click() }, 1000);");
+            //拦截下载速度过快
+            if (message == "下载速度太快，请稍后再试！")
+            {
+                chrome.ExecuteScriptAsync("setTimeout(function () { $('#getcode-btn').click() }, 1000);");
+            }
+            
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -186,11 +195,6 @@ namespace CouponClient
             var url = e.Url.ToLower();
             if (url.Contains(GOTOADV_URL))
             {
-                //防止加载过快问题
-                //chrome.ExecuteScriptAsync("window.alert = function (message) { if (message == '下载速度太快，请稍候再试！') { setTimeout(function () { $('#getcode-btn').click() }, 1000) } }");
-                //chrome.ExecuteScriptAsync("window.alert = function (message) { if (message == '下载速度太快，请稍后再试！') { setTimeout(function () { $('body').css('color', 'red') }, 1000); } else { $('body').css('color', 'green'); $('body').append(message); } }");
-                chrome.ExecuteScriptAsync("$('#ifile')[0].contentWindow.alert = function (message) { console.log(message) };");
-                //chrome.ExecuteScriptAsync("alert('下载速度太快，请稍候再试！')");
                 Download();
 
             }
@@ -258,7 +262,7 @@ namespace CouponClient
 
                 chrome.ExecuteScriptAsync($"pageClick({Page.Number + 1})");
             }
-            //Thread.Sleep(5000);
+            Thread.Sleep(5000);
             fileInfo.Delete();
         }
 
