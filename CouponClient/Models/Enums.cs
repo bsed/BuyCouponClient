@@ -29,6 +29,7 @@ namespace CouponClient.Enums
         TaoBaoCouponAddDbComplated = 31,
         TaoBaoCouponAddDbFail = 32,
         TaoBaoCouponAddedDb = 33,
+        TaoBaoNoAddSite = 40,
         MoGuJieSignSuccess = 140,
         MoGuJieGetCouponStart = 150,
         MoGuJieGetCouponComplated = 151,

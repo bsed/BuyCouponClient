@@ -88,6 +88,7 @@ namespace CouponClient
             chrome.DownloadHandler = downloadHandler;
             plChrome.Controls.Add(chrome);
         }
+        
 
         private void Chrome_AddressChanged(object sender, AddressChangedEventArgs e)
         {
@@ -167,7 +168,10 @@ namespace CouponClient
                 }
                 else
                 {
-                    OnStateChange.Invoke(Enums.StateLogType.TaoBaoCouponUploadFail, $"jquey不存在");
+                    using (var client = new WebClient())
+                    {
+                        client.DownloadFile("https://code.jquery.com/jquery-3.2.1.min.js", path);
+                    }
                 }
             }
             catch (Exception ex)
@@ -188,6 +192,16 @@ namespace CouponClient
             }
             try
             {
+                Action restart = () =>
+                {
+                    Task task = new Task(() =>
+                    {
+                        System.Threading.Thread.Sleep(5 * 60 * 1000);
+                        chrome.Load(COUPON_DOWNLOAD_URL);
+                    });
+                    task.Start();
+                };
+
                 //获取自己和所有二级代理，今天采集的淘宝券
                 var proxys = Bll.BuyApis.GetProxyCouponCount(UserInfo.ID, Enums.Platform.TaoBao)
                     .Where(s => !string.IsNullOrWhiteSpace(s.PhoneNumber)
@@ -198,10 +212,21 @@ namespace CouponClient
                     await chrome.Wait(".list-desc", 10000, async () =>
                      {
                          chrome.ExecuteScriptAsync("$('.list-desc:last').click()");
-                         await chrome.Wait(".dialog-overlay button[mx-click=submit]", 10000, async () =>
+                         await chrome.Wait(".dialog-overlay [mx-click]", 10000, async () =>
                             {
+                                var scrSite = await chrome.EvaluateScriptAsync("(function (){ return $('#J_sites_dropdown ul li').length;})()");
+                                if (scrSite.Success)
+                                {
+                                    if (Convert.ToInt32(scrSite.Result.ToString()) == 0)
+                                    {
+                                        OnStateChange?.Invoke(Enums.StateLogType.TaoBaoNoAddSite, "未添加导购推广");
+                                        restart();
+                                        return;
+                                    }
+                                }
                                 var html = await chrome.GetSourceAsync();
                                 var doc = CQ.CreateDocument(html);
+
                                 var list = doc.Select("#J_zones_dropdown .dropdown-list li span");
                                 var proxy = proxys[0];
                                 //获取联盟广告位
@@ -226,12 +251,7 @@ namespace CouponClient
                 else
                 {
                     OnStateChange?.Invoke(Enums.StateLogType.TaoBaoCouponAddDbComplated, $"未检测到有新淘宝商品");
-                    Task task = new Task(() =>
-                    {
-                        System.Threading.Thread.Sleep(5 * 60 * 1000);
-                        chrome.Load(COUPON_DOWNLOAD_URL);
-                    });
-                    task.Start();
+                    restart();
                 }
             }
             catch (Exception ex)
@@ -246,6 +266,10 @@ namespace CouponClient
             if (e.KeyCode == Keys.Enter)
             {
                 chrome.Load(txtAddress.Text);
+            }
+            if (e.KeyCode== Keys.F12)
+            {
+                chrome.ShowDevTools();
             }
         }
 

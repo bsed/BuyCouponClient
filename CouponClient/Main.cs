@@ -7,6 +7,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,6 +42,23 @@ namespace CouponClient
         {
             try
             {
+                string path = $"{System.Environment.CurrentDirectory}\\jquery-3.2.1.min.js";
+                if (!File.Exists(path))
+                {
+                    try
+                    {
+                        using (var client = new WebClient())
+                        {
+                            client.DownloadFile("https://code.jquery.com/jquery-3.2.1.min.js", path);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLog(ex.Message);
+                    }
+
+                }
+
                 var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
                 InitializeComponent();
                 CefSettings settings = new CefSettings();
@@ -129,11 +147,23 @@ namespace CouponClient
         #region 事件处理
         private void OnStateChange(Enums.StateLogType type, string message)
         {
-            //Action temp = () =>
-            //{
-            //    tab.SelectedTab = tabLog;
-            //};
-            //tab.Invoke(temp);
+            switch (type)
+            {
+                case Enums.StateLogType.TaoBaoSignSuccess:
+                case Enums.StateLogType.MoGuJieSignSuccess:
+                case Enums.StateLogType.JdSignSuccess:
+                    {
+                        Action temp = () =>
+                        {
+                            tab.SelectedTab = tabLog;
+                        };
+                        tab.Invoke(temp);
+                    }
+                    break;
+                default:
+                    break;
+            }
+          
             WriteLog(message);
         }
 
@@ -225,9 +255,9 @@ namespace CouponClient
             }
             catch (Exception)
             {
-                
+
             }
-            
+
         }
 
 
