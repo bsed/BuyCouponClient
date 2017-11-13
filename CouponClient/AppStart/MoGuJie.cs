@@ -189,7 +189,6 @@ namespace CouponClient.MoGuJie
 
         public List<Cid> GetAllCategory(string pid = null)
         {
-            var cids = new List<Cid>();
             var p = new Dictionary<string, string>();
             p.Add("parentID", pid);
             p.Add("userId", Token.UserID);
@@ -203,7 +202,6 @@ namespace CouponClient.MoGuJie
 
         public List<Cid2> GetAllCategory2(string pid = null)
         {
-            var cids = new List<Cid>();
             var p = new Dictionary<string, string>();
             p.Add("parentID", pid);
             p.Add("userId", Token.UserID);

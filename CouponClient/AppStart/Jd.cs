@@ -15,8 +15,8 @@ namespace CouponClient.Bll
     public static class Jd
     {
         private static string jdCidLogPath = Config.RuningPath + "/jdLog.json";
-
         private static string jdTempCoupon = Config.RuningPath + "/jdTempCoupon.json";
+
         private static FileInfo filLog;
         static Jd()
         {
@@ -268,38 +268,8 @@ namespace CouponClient.Bll
 
         private static List<Models.Coupon> _tempCoupon;
 
-        /// <summary>
-        /// 缓存中的优惠券，待上传
-        /// </summary>
-        public static List<Models.Coupon> TempCoupons
-        {
-            get
-            {
 
-                if (_tempCoupon == null)
-                {
-                    if (File.Exists(jdTempCoupon))
-                    {
-                        string strCoupon = File.ReadAllText(jdTempCoupon);
-                        _tempCoupon = JsonConvert.DeserializeObject<List<Models.Coupon>>(strCoupon);
-                    }
-                    else
-                    {
-                        _tempCoupon = new List<Models.Coupon>();
-                    }
-                }
-                return _tempCoupon;
-            }
 
-        }
-
-        public static void UpdateTempCoupons(IEnumerable<Models.Coupon> newCoupons)
-        {
-            _tempCoupon.AddRange(newCoupons);
-            string strCoupon = JsonConvert.SerializeObject(_tempCoupon);
-            File.WriteAllText(jdTempCoupon, strCoupon);
-
-        }
 
         public static List<Models.Coupon> GetCouponsFromExcel(string userID, string cid, string html, string path)
         {
@@ -406,5 +376,57 @@ namespace CouponClient.Bll
             }
 
         }
+
+
+        public static class TempCoupons
+        {
+
+            private static List<Models.Coupon> _tempCoupon;
+
+            /// <summary>
+            /// 缓存中的优惠券，待上传
+            /// </summary>
+            public static List<Models.Coupon> Data
+            {
+                get
+                {
+                    if (_tempCoupon == null)
+                    {
+                        if (File.Exists(jdTempCoupon))
+                        {
+                            string strCoupon = File.ReadAllText(jdTempCoupon);
+                            _tempCoupon = JsonConvert.DeserializeObject<List<Models.Coupon>>(strCoupon);
+                        }
+                        else
+                        {
+                            _tempCoupon = new List<Models.Coupon>();
+                        }
+                    }
+                    return _tempCoupon;
+                }
+
+            }
+
+
+            public static void Update(IEnumerable<Models.Coupon> newCoupons)
+            {
+                Data.AddRange(newCoupons);
+                string strCoupon = JsonConvert.SerializeObject(Data);
+                File.WriteAllText(jdTempCoupon, strCoupon);
+
+            }
+
+            public static void Clear()
+            {
+                _tempCoupon = new List<Models.Coupon>();
+                if (File.Exists(jdTempCoupon))
+                {
+                    File.Delete(jdTempCoupon);
+                }
+
+            }
+        }
     }
+
+
 }

@@ -15,6 +15,8 @@ using System.IO;
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 namespace CouponClient
 {
     public partial class ColJd : UserControl
@@ -110,7 +112,7 @@ namespace CouponClient
             {
                 chrome.ExecuteScriptAsync("setTimeout(function () { $('#getcode-btn').click() }, 1000);");
             }
-            
+
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -122,7 +124,7 @@ namespace CouponClient
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
-        public List<Models.Coupon> TempCoupon { get; set; } = new List<Models.Coupon>();
+        public List<Models.Coupon> TempCoupon { get { return Bll.Jd.TempCoupons.Data; } }
 
         public void InitLoad()
         {
@@ -186,10 +188,6 @@ namespace CouponClient
             }
         }
 
-
-
-
-
         private void Chrome_FrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
             var url = e.Url.ToLower();
@@ -209,7 +207,8 @@ namespace CouponClient
             var html = await chrome.GetSourceAsync();
             var cid = NoLoadCids.FirstOrDefault().Cid;
             var newCoupon = Bll.Jd.GetCouponsFromExcel(noload.UserID, cid, html, path);
-            TempCoupon.AddRange(newCoupon);
+            //缓存到本地的json文件
+            Bll.Jd.TempCoupons.Update(newCoupon);
             if (Page.IsLast)//该类目的最后一页
             {
                 //记录该
@@ -249,20 +248,18 @@ namespace CouponClient
                         }
                     });
                     //导入完成后清空
-                    TempCoupon = new List<Models.Coupon>();
+                    Bll.Jd.TempCoupons.Clear();
                     if (NoLoadCids.Count == 0)
                     {
                         OnStateChange(Enums.StateLogType.JdCouponAddedDb, "已经采集完成");
                     }
+                    
                 }
             }
             else
             {
-                //回避下载过快问题
-
                 chrome.ExecuteScriptAsync($"pageClick({Page.Number + 1})");
             }
-            Thread.Sleep(5000);
             fileInfo.Delete();
         }
 
