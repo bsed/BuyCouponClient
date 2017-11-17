@@ -170,6 +170,7 @@
     <Compile Include="Main.Designer.cs">
       <DependentUpon>Main.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\Cid.cs" />
     <Compile Include="Models\Config.cs" />
     <Compile Include="Models\CookieVisitor.cs" />
     <Compile Include="Models\Coupon.cs" />

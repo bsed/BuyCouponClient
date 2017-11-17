@@ -21,14 +21,17 @@ namespace CouponClient.Models
 
         public string Url { get; set; }
 
+        public int? ID { get; set; }
 
     }
 
-    public class JdUserCidUrl : JdCidUrl
+    public class JdUserCidUrl
     {
         public string UserID { get; set; }
 
         public string PhoneNumber { get; set; }
+
+        public JdCidUrl[] CidUrls { get; set; }
     }
 
     public class JdCidLog

@@ -43,6 +43,7 @@ namespace CouponClient.Models
         {
             var fileInfo = new FileInfo(downloadItem.SuggestedFileName);
             string fileName = fileName = $"{_prefix}{_newName ?? fileInfo.Name.Replace(fileInfo.Extension, "")}{_suffix}{fileInfo.Extension}";
+            fileName = fileName.Replace("/", "").Replace("\\", "");
             string filePath = $"{_path}\\{fileName}";
             if (!callback.IsDisposed)
             {

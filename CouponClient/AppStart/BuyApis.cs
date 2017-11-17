@@ -57,6 +57,14 @@ namespace CouponClient.Bll
             var result = api.CreateRequestReturnBuyResult<IEnumerable<Models.ProxyCouponCount>>().Result;
             return result;
         }
+
+        public static IEnumerable<Models.CouponType> GetJdCouponType()
+        {
+            var api = new Api.BuyApi("GetCid", "Jd", type: "GET");
+            var result = api.CreateRequestReturnBuyResult<IEnumerable<Models.CouponType>>().Result;
+            return result;
+        }
+
     }
 
 

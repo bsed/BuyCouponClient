@@ -244,6 +244,14 @@ namespace CouponClient.Bll
                 new Models.JdCidUrl("宠物生活+出行装备","https://media.jd.com/gotoadv/pickupdate?type=1&pageIndex=&pageSize=50&property=&sort=&goodsView=&cat1=6994&cat2=7000&cat3="),
 
             };
+
+            var coupTypes = BuyApis.GetJdCouponType();
+            foreach (var item in _allCids)
+            {
+                item.ID = coupTypes
+                    .FirstOrDefault(s => s.Keyword.SplitToArray<string>(',')
+                    .Any(x => x == item.Cid))?.ID;
+            }
         }
 
         private static void _logs_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -266,12 +274,17 @@ namespace CouponClient.Bll
             }
         }
 
-        private static List<Models.Coupon> _tempCoupon;
 
 
-
-
-        public static List<Models.Coupon> GetCouponsFromExcel(string userID, string cid, string html, string path)
+        /// <summary>
+        /// 读取JD的EXCEL表
+        /// </summary>
+        /// <param name="userID"></param>
+        /// <param name="cid"></param>
+        /// <param name="html"></param>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static List<Models.Coupon> GetCouponsFromExcel(string userID, Models.JdCidUrl cid, string html, string path)
         {
             var dtable = new ExcelHelper(path).ExcelToDataTable(null, true);
             var doc = CQ.CreateDocument(html);
@@ -291,15 +304,19 @@ namespace CouponClient.Bll
                         .Replace(".html", "");
                     var hItem = CQ.CreateDocument(doc.Select($"[skuid={id}]")[0].OuterHTML);
                     var img = hItem.Select(".img-wrap img")[0].GetAttribute("src");
-                    var price = Convert.ToDecimal(decode(hItem.Select(".price-exc .price em").FirstOrDefault()?.InnerText ?? "$0").Remove(0, 1));
                     var oPrice = Convert.ToDecimal(decode(hItem.Select(".pc_unitPrice .pri").FirstOrDefault()?.InnerText).Remove(0, 1));
+                    var price = Convert.ToDecimal(decode(hItem.Select(".price-exc .price em").FirstOrDefault()?.InnerText ?? "$0").Remove(0, 1));
+                    if (price == 0)
+                    {
+                        price = oPrice;
+                    }
                     var link = item["我要推广"].ToString();
                     var docShopName = hItem.Select(".shop-name");
                     var shopName = docShopName.Count() > 0 ? decode(docShopName[0].InnerText) : "京东自营";
                     var c = new Models.Coupon
                     {
-
-                        Cid = cid,
+                        TypeID = cid.ID,
+                        Cid = cid.Cid,
                         Commission = Convert.ToDecimal(item["无线佣金（元）"]),
                         CommissionRate = Convert.ToDecimal(item["无线佣金比例（%）"]),
                         CreateDateTime = DateTime.Now,
@@ -319,7 +336,7 @@ namespace CouponClient.Bll
                         Total = 1000,
                         StartDateTime = dates[0],
                         Value = $"-{oPrice - price}",
-                        ProductType = cid,
+                        ProductType = cid.Cid,
                         UserID = userID,
 
                     };
@@ -348,7 +365,7 @@ namespace CouponClient.Bll
             string[] url;
             try
             {
-                //url = new Api.BuyUploadApi(files).CreateRequestReturnUrls();
+                url = new Api.BuyUploadApi(files).CreateRequestReturnUrls();
                 stateChange(Enums.StateLogType.JdCouponUploadComplated);
             }
             catch (Exception)
@@ -359,16 +376,17 @@ namespace CouponClient.Bll
             try
             {
                 stateChange(Enums.StateLogType.JdCouponAddDbStart);
-                //var import = new Api.BuyApi("ImportItems", "Jd", new { Url = url[0] }).CreateRequestReturnBuyResult<object>();
+                var import = new Api.BuyApi("Import", "Jd", new { Url = url[0] }).CreateRequestReturnBuyResult<object>();
 
-                //if (import.State == "Success")
-                //{
-                //    stateChange(Enums.StateLogType.JdCouponAddDbComplated);
-                //}
-                //else
-                //{
-                //    stateChange(Enums.StateLogType.JdCouponAddDbFail);
-                //}
+                if (import.State == "Success")
+                {
+                    stateChange(Enums.StateLogType.JdCouponAddDbComplated);
+                }
+                else
+                {
+                    stateChange(Enums.StateLogType.JdCouponAddDbFail);
+                }
+                TempCoupons.Clear();
             }
             catch (Exception)
             {
@@ -410,7 +428,10 @@ namespace CouponClient.Bll
 
             public static void Update(IEnumerable<Models.Coupon> newCoupons)
             {
-                Data.AddRange(newCoupons);
+                var filter = newCoupons
+                    .Where(s => s.Commission > 0)
+                    .Where(s => s.OriginalPrice >= s.Price);
+                Data.AddRange(filter);
                 string strCoupon = JsonConvert.SerializeObject(Data);
                 File.WriteAllText(jdTempCoupon, strCoupon);
 

@@ -152,11 +152,15 @@ namespace CouponClient
                     OnStateChange?.Invoke(Enums.StateLogType.JdCouponAddedDb, "暂无新数据库");
                 }
                 var cid = NoLoadCids.FirstOrDefault();
-                chrome.Load(cid.Url);
+
+                LoadAddress(cid.CidUrls.FirstOrDefault().Url);
             }
         }
 
-
+        private void LoadAddress(string url)
+        {
+            chrome.ExecuteScriptAsync($"location='{url}'");
+        }
 
         /// <summary>
         /// 还没加载的分类
@@ -168,21 +172,28 @@ namespace CouponClient
                 var hadLoad = cidLogs
                       .Where(s => s.CreateDateTime > DateTime.Now.AddDays(-1))
                       .ToList();
-                var model = (from log in cidLinks
-                             from u in ProxyUsers
-                             select new Models.JdUserCidUrl
-                             {
-                                 Cid = log.Cid,
-                                 Url = log.Url,
-                                 UserID = u.UserID
-                             }).OrderBy(s => s.UserID)
-                       .ThenBy(s => s.Cid)
-                       .ToList();
-                var loaded = (from m in model
-                              from h in hadLoad
-                              where m.UserID == h.UserID && m.Cid == h.Cid
-                              select m).ToList();
-                model = model.Except(loaded).ToList();
+                var model = ProxyUsers.Select(s => new Models.JdUserCidUrl
+                {
+                    UserID = s.UserID,
+                    PhoneNumber = s.PhoneNumber,
+                    CidUrls = cidLinks.Where(x => !hadLoad.Any(y => y.UserID == s.UserID && y.Cid == x.Cid)).ToArray()
+
+                }).ToList();
+                //var model = (from log in cidLinks
+                //             from u in ProxyUsers
+                //             select new Models.JdUserCidUrl
+                //             {
+                //                 Cid = log.Cid,
+                //                 Url = log.Url,
+                //                 UserID = u.UserID
+                //             }).OrderBy(s => s.UserID)
+                //       .ThenBy(s => s.Cid)
+                //       .ToList();
+                //var loaded = (from m in model
+                //              from h in hadLoad
+                //              where m.UserID == h.UserID && m.Cid == h.Cid
+                //              select m).ToList();
+                //model = model.Except(loaded).ToList();
                 return model;
 
             }
@@ -205,55 +216,56 @@ namespace CouponClient
             var fileInfo = new FileInfo(path);
             OnStateChange?.Invoke(Enums.StateLogType.JdCouponDownloadComplated, $"Jd{fileInfo.Name}下载完成");
             var html = await chrome.GetSourceAsync();
-            var cid = NoLoadCids.FirstOrDefault().Cid;
+            var cid = noload.CidUrls.FirstOrDefault();
             var newCoupon = Bll.Jd.GetCouponsFromExcel(noload.UserID, cid, html, path);
             //缓存到本地的json文件
             Bll.Jd.TempCoupons.Update(newCoupon);
             if (Page.IsLast)//该类目的最后一页
             {
                 //记录该
-                cidLogs.Add(new Models.JdCidLog { Cid = cid, CreateDateTime = DateTime.Now, UserID = noload.UserID });
-                var next = NoLoadCids.FirstOrDefault()?.Url;
-                if (!string.IsNullOrWhiteSpace(next))
+                cidLogs.Add(new Models.JdCidLog { Cid = cid.Cid, CreateDateTime = DateTime.Now, UserID = noload.UserID });
+                //导入
+                string phoneNumber = noload.PhoneNumber;
+                Bll.Jd.Import(TempCoupon, (state) =>
                 {
-                    chrome.Load(next);
-                }
-                else //没有下一个了CidUrl,该代理已经上传完成
-                {
-                    string phoneNumber = noload.PhoneNumber;
-                    Bll.Jd.Import(TempCoupon, (state) =>
+                    switch (state)
                     {
-                        switch (state)
-                        {
-                            case Enums.StateLogType.JdCouponAddDbComplated:
-                                OnStateChange(state, $"代理 {phoneNumber} JD导入完成");
-                                break;
-                            case Enums.StateLogType.JdCouponAddDbFail:
-                                OnStateChange(state, $"代理 {phoneNumber} JD导入失败");
-                                break;
-                            case Enums.StateLogType.JdCouponAddDbStart:
-                                OnStateChange(state, $"代理 {phoneNumber} JD导入开始");
-                                break;
-                            case Enums.StateLogType.JdCouponUploadComplated:
-                                OnStateChange(state, $"代理 {phoneNumber} JD上传开始");
-                                break;
-                            case Enums.StateLogType.JdCouponUploadFail:
-                                OnStateChange(state, $"代理 {phoneNumber} JD上传失败");
-                                break;
-                            case Enums.StateLogType.JdCouponUploadStart:
-                                OnStateChange(state, $"代理 {phoneNumber} JD上传开始");
-                                break;
-                            default:
-                                break;
-                        }
-                    });
-                    //导入完成后清空
-                    Bll.Jd.TempCoupons.Clear();
-                    if (NoLoadCids.Count == 0)
-                    {
-                        OnStateChange(Enums.StateLogType.JdCouponAddedDb, "已经采集完成");
+                        case Enums.StateLogType.JdCouponAddDbComplated:
+                            OnStateChange(state, $"代理 {phoneNumber} 分类 {cid.Cid} 导入完成");
+                            break;
+                        case Enums.StateLogType.JdCouponAddDbFail:
+                            OnStateChange(state, $"代理 {phoneNumber} 分类 {cid.Cid} 导入失败");
+                            break;
+                        case Enums.StateLogType.JdCouponAddDbStart:
+                            OnStateChange(state, $"代理 {phoneNumber} 分类 {cid.Cid} 导入开始");
+                            break;
+                        case Enums.StateLogType.JdCouponUploadComplated:
+                            OnStateChange(state, $"代理 {phoneNumber} 分类 {cid.Cid} 上传开始");
+                            break;
+                        case Enums.StateLogType.JdCouponUploadFail:
+                            OnStateChange(state, $"代理 {phoneNumber} 分类 {cid.Cid} 上传失败");
+                            break;
+                        case Enums.StateLogType.JdCouponUploadStart:
+                            OnStateChange(state, $"代理 {phoneNumber} 分类 {cid.Cid} 上传开始");
+                            break;
+                        default:
+                            break;
                     }
-                    
+                });
+                //导入完成后清空缓存
+                Bll.Jd.TempCoupons.Clear();
+                if (noload == null)
+                {
+                    OnStateChange(Enums.StateLogType.JdCouponAddedDb, $"全部代理已经采集完成");
+                }
+                else
+                {
+                    var next = NoLoadCids.FirstOrDefault()?.CidUrls.FirstOrDefault().Url;
+                    if (!string.IsNullOrWhiteSpace(next))
+                    {
+                        LoadAddress(next);
+                        //chrome.Load(next);
+                    }
                 }
             }
             else
@@ -349,7 +361,7 @@ namespace CouponClient
                                    chrome.ExecuteScriptAsync($"$('#kind_2').click();$('#positionName').val('{proxy.PhoneNumber}');");
                                }
 
-                               downloadHandler.Set(prefix: $"{proxy.PhoneNumber}_{NoLoadCids.FirstOrDefault().Cid}_", suffix: $"_{Page.Number}_{Page.Total}");
+                               downloadHandler.Set(prefix: $"{proxy.PhoneNumber}_{NoLoadCids.FirstOrDefault().CidUrls.FirstOrDefault().Cid}_", suffix: $"_{Page.Number}_{Page.Total}");
                                chrome.ExecuteScriptAsync("$('#getcode-btn').click()");
                            });
 
@@ -358,6 +370,7 @@ namespace CouponClient
                     catch (Exception ex)
                     {
                         OnStateChange?.Invoke(Enums.StateLogType.JdCouponColumnError, "找不到广告位");
+                        LoadAddress(chrome.Address);
                     }
 
 
@@ -385,7 +398,8 @@ namespace CouponClient
         {
             if (e.KeyCode == Keys.Enter)
             {
-                chrome.Load(txtAddress.Text);
+                LoadAddress(txtAddress.Text);
+                //chrome.Load(txtAddress.Text);
             }
         }
 
