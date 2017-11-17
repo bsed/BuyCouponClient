@@ -81,8 +81,7 @@ namespace CouponClient
             frmLogin.OnLoginSuccess += FrmLogin_OnLoginSuccess;
             frmLogin.FormClosing += FrmLogin_FormClosing;
             frmLogin.ShowDialog();
-            tab.SelectedTab = tabJd;
-            //tab.TabPages.Remove(tabJd);
+            tab.SelectedTab = tabTaoBao;
             MonitorNetworkSpeed.NetworkSpeedChanged += MonitorNetworkSpeed_NetworkSpeedChanged;
 
         }

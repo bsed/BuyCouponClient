@@ -27,7 +27,7 @@
     <UpdateIntervalUnits>Days</UpdateIntervalUnits>
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
+    <MapFileExtensions>false</MapFileExtensions>
     <InstallUrl>http://www.immlm.cn/BuyClient/Download/</InstallUrl>
     <ProductName>财吉猫</ProductName>
     <PublisherName>财吉猫</PublisherName>
@@ -35,7 +35,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>publish.htm</WebPage>
     <ApplicationRevision>13</ApplicationRevision>
-    <ApplicationVersion>1.1.0.13</ApplicationVersion>
+    <ApplicationVersion>1.2.0.13</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
     <PublishWizardCompleted>true</PublishWizardCompleted>
