@@ -69,6 +69,12 @@ namespace CouponClient
 
         }
 
+        private List<Models.ProxyCouponCount> proxys;
+
+        private List<MoGuJie.ChannelUser> channels;
+
+        private bool onlyFirstPage = false;
+
         private async void Chrome_FrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
             var url = e.Url.ToLower();
@@ -83,13 +89,35 @@ namespace CouponClient
                     RefreshToken = query.Find("#hidRefreshToken").Val<string>(),
                     UserID = query.Find("#hidUserID").Val<string>(),
                 };
-                //CookieVisitor visitor = new CookieVisitor();
-                //visitor.SendCookie += visitor_SendCookie;
-                //cookieManager.VisitAllCookies(visitor);
+                proxys = Bll.BuyApis.GetProxyCouponCount(UserInfo.ID, Enums.Platform.MGJ)
+                  .Where(s => !string.IsNullOrWhiteSpace(s.PhoneNumber))
+                  .ToList();
+                var mgjChannels = mgj.ChannelGetAll();
+                //获取没有添加渠道的电话号号
+                var noAddProxys = proxys.Where(s => !channels.Any(x => x.Name == s.PhoneNumber)).ToList();
+                if (noAddProxys.Count > 0)
+                {
+                    foreach (var item in noAddProxys)
+                    {
+                        mgj.ChannelAdd(item.PhoneNumber);
+                    }
+                    mgjChannels = mgj.ChannelGetAll();
+                }
+                channels = (from c in mgj.ChannelGetAll()
+                            from cu in proxys
+                            where c.Name == cu.PhoneNumber
+                            select new MoGuJie.ChannelUser
+                            {
+                                ID = c.ID,
+                                Name = c.Name,
+                                UserID = cu.UserID
+                            }).ToList();
                 new Task(() => { LoadCoupon(); }).Start();
 
             }
         }
+
+
 
         public void LoadType(bool reload)
         {
@@ -157,7 +185,7 @@ namespace CouponClient
             }
             foreach (var item in r)
             {
-                item.Count = mgj.GetItemList(cid: item.DID).Total;
+                item.Count = mgj.GetItemList(channels, item).Total;
             }
             saveResult("temp2", r);
 
@@ -170,8 +198,6 @@ namespace CouponClient
             var cids = MoGuJie.Method.AllCategory;
             var pageSize = 100;
             var models = new List<Coupon>();
-            var checkCount = new Api.BuyApi("Count", "MoGuJie", new { UserID = UserInfo.ID }, "GET").CreateRequestReturnBuyResult<JToken>();
-            bool onlyFirstPage = checkCount.Result["Count"].Value<int>() > 10000;
             foreach (var cid in cids)
             {
                 if (!EnableRun)
@@ -182,30 +208,17 @@ namespace CouponClient
                 try
                 {
                     //获取第一页
-                    var result = mgj.GetItemList(pageNo: 1, pageSize: pageSize, cid: cid.DID);
-                    Action<IEnumerable<Coupon>> set = items =>
-                    {
-                        //设置导入没有的字段
-                        foreach (var item in items)
-                        {
-                            item.ProductType = cid.Name;
-                            item.TypeID = cid.TypeID;
-                            item.UserID = UserInfo.ID;
-                        }
-                    };
-
+                    var result = mgj.GetItemList(channels, cid, pageNo: 1, pageSize: pageSize);
                     //已经初始化过了，就不往下加载了
                     if (result.Total > 0)
                     {
-                        set(result.Items);
                         models.AddRange(result.Items);
                         //获取
                         if (!onlyFirstPage)
                         {
                             for (int i = 2; i <= result.TotalPage; i++)
                             {
-                                var result2 = mgj.GetItemList(pageNo: i, pageSize: pageSize, cid: cid.DID);
-                                set(result2.Items);
+                                var result2 = mgj.GetItemList(channels, cid, pageNo: i, pageSize: pageSize);
                                 models.AddRange(result2.Items);
                             }
 
@@ -249,9 +262,9 @@ namespace CouponClient
                     }
                     catch (Exception)
                     {
-                        
+
                     }
-                   
+
                 }
                 else
                 {
@@ -326,11 +339,11 @@ namespace CouponClient
 
         private void txtAddress_KeyUp(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode== Keys.Enter)
+            if (e.KeyCode == Keys.Enter)
             {
                 chrome.Load(txtAddress.Text);
             }
-           
+
         }
 
         private void toolStrip1_Resize(object sender, EventArgs e)

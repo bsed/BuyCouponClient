@@ -73,7 +73,10 @@ namespace CouponClient.MoGuJie
             Token = new Token(j);
         }
 
-        public GetItemListResult GetItemList(string keyword = null, int pageNo = 1, int pageSize = 50, SortType sortType = SortType.Default, string cid = null)
+        public GetItemListResult GetItemList(IEnumerable<ChannelUser> channelUsers,
+            Cid2 cid,
+            string keyword = null, int pageNo = 1,
+            int pageSize = 50, SortType sortType = SortType.Default)
         {
             //{ "keyword":    字符串 否    搜索词（商品名称关键词或商品描述关键词） 
             //"pageNo":    整型 否    页码 
@@ -89,7 +92,7 @@ namespace CouponClient.MoGuJie
                 pageNo = pageNo,
                 pageSize = pageSize,
                 //sortType = (int)sortType,
-                cid = cid,
+                cid = cid.DID,
                 hasCoupon = true
             };
 
@@ -130,31 +133,38 @@ namespace CouponClient.MoGuJie
                     };
                     if (!string.IsNullOrWhiteSpace(obj.CouponInfo))
                     {
-                        var tm = new Models.Coupon
+                        foreach (var c in channelUsers)
                         {
-                            CreateDateTime = DateTime.Now,
-                            EndDateTime = DateTime.Now.Date.AddDays(obj.DayLeft + 1).AddSeconds(-1),
-                            StartDateTime = DateTime.Now.Date,
-                            ProductID = obj.ItemID,
-                            Image = obj.PictUrl,
-                            Link = $"http://union.mogujie.com/jump?userid={Token.UserID}&itemid={obj.ItemID}&promid={obj.Promid}",
-                            Name = obj.Title,
-                            OriginalPrice = obj.AfterCouponPrice + obj.CouponStartFee,
-                            Platform = Enums.CouponPlatform.MoGuJie,
-                            Price = obj.AfterCouponPrice,
-                            ShopName = obj.ShopTitle,
-                            Subtitle = obj.ExtendDesc,
-                            Value = obj.CouponInfo,
-                            Sales = obj.BIZ30day,
-                            CommissionRate = obj.CommissionRate,
-                            Commission = Math.Round(obj.AfterCouponPrice * obj.CommissionRate / 100, 2),
-                            Total = obj.CouponTotalCount,
-                            Left = obj.CouponLeftCount,
-                            PCouponID = obj.Promid,
-                            Cid = obj.Cid,
-                            PLink = $"http://union.mogujie.com/jump?itemid={obj.ItemID}&promid={obj.Promid}"
-                        };
-                        model.Items.Add(tm);
+                            var tm = new Models.Coupon
+                            {
+                                CreateDateTime = DateTime.Now,
+                                EndDateTime = DateTime.Now.Date.AddDays(obj.DayLeft + 1).AddSeconds(-1),
+                                StartDateTime = DateTime.Now.Date,
+                                ProductID = obj.ItemID,
+                                Image = obj.PictUrl,
+                                Link = $"http://union.mogujie.com/jump?userid={Token.UserID}&itemid={obj.ItemID}&promid={obj.Promid}&gid={c.ID}",
+                                Name = obj.Title,
+                                OriginalPrice = obj.AfterCouponPrice + obj.CouponStartFee,
+                                Platform = Enums.CouponPlatform.MoGuJie,
+                                Price = obj.AfterCouponPrice,
+                                ShopName = obj.ShopTitle,
+                                Subtitle = obj.ExtendDesc,
+                                Value = obj.CouponInfo,
+                                Sales = obj.BIZ30day,
+                                CommissionRate = obj.CommissionRate,
+                                Commission = Math.Round(obj.AfterCouponPrice * obj.CommissionRate / 100, 2),
+                                Total = obj.CouponTotalCount,
+                                Left = obj.CouponLeftCount,
+                                PCouponID = obj.Promid,
+                                Cid = obj.Cid,
+                                PLink = $"http://union.mogujie.com/jump?itemid={obj.ItemID}&promid={obj.Promid}",
+                                UserID = c.UserID,
+                                TypeID = cid.TypeID,
+                                ProductType = cid.Name,
+                            };
+                            model.Items.Add(tm);
+                        }
+
                     }
 
                 }
@@ -178,10 +188,22 @@ namespace CouponClient.MoGuJie
             p.Add("timestamp", DateTime.Now.Ticks.ToString());
 
             System.Text.StringBuilder strP = new System.Text.StringBuilder(Config.AppSecret);
+            //这个大写的字母开头的参数放在最前面
+            if (p.Any(s => s.Key == "CpsChannelGroupParam"))
+            {
+                var pEx = p["CpsChannelGroupParam"];
+                strP.Append($"CpsChannelGroupParam{pEx}");
+            }
+
             foreach (var item in p.OrderBy(s => s.Key))
             {
-                strP.Append($"{item.Key}{item.Value}");
+                if (item.Key != "CpsChannelGroupParam")
+                {
+                    strP.Append($"{item.Key}{item.Value}");
+                }
             }
+
+
             strP.Append(Config.AppSecret);
             p.Add("sign", MD5Hash.Hash(strP.ToString()).ToUpper());
             return url + p.ToParam("?");
@@ -233,6 +255,61 @@ namespace CouponClient.MoGuJie
             var url = GetUrl("xiaodian.common.decryptID", p);
             var result = new Api.BaseApi(url, "POST", p).CreateRequestReturnJson();
             return result["result"]["data"].Value<string>();
+        }
+
+        public List<Channel> ChannelGetAll()
+        {
+            var p = new Dictionary<string, string>();
+            p.Add("userId", Token.UserID);
+            var url = GetUrl("xiaodian.cpsdata.channelgroup.getList", p);
+            var result = new Api.BaseApi(url, "POST", p).CreateRequestReturnJson();
+            var model = result["result"]["data"].Values<JObject>()
+                .Select(s => new Channel(s))
+                .ToList();
+            return model;
+        }
+
+
+        public void ChannelAdd(string name)
+        {
+            var p = new Dictionary<string, string>();
+            p.Add("CpsChannelGroupParam", JsonConvert.SerializeObject(new { name = name }));
+            p.Add("userId", Token.UserID);
+            var url = GetUrl("xiaodian.cpsdata.channelgroup.save", p);
+            var result = new Api.BaseApi(url, "POST", p).CreateRequestReturnJson();
+            var code = result["status"]["code"].Value<string>();
+            if (code != "0000000")
+            {
+                throw new Exception(result["status"]["msg"].Value<string>());
+            }
+        }
+
+        public void ChannelUpdate(int id, string name)
+        {
+            var p = new Dictionary<string, string>();
+            p.Add("CpsChannelGroupParam", JsonConvert.SerializeObject(new { id = id, name = name }));
+            p.Add("userId", Token.UserID);
+            var url = GetUrl("xiaodian.cpsdata.channelgroup.update", p);
+            var result = new Api.BaseApi(url, "POST", p).CreateRequestReturnJson();
+            var code = result["status"]["code"].Value<string>();
+            if (code != "0000000")
+            {
+                throw new Exception(result["status"]["msg"].Value<string>());
+            }
+        }
+
+        public void ChannelDelete(int id)
+        {
+            var p = new Dictionary<string, string>();
+            p.Add("CpsChannelGroupParam", JsonConvert.SerializeObject(new { id = id }));
+            p.Add("userId", Token.UserID);
+            var url = GetUrl("xiaodian.cpsdata.channelgroup.delete", p);
+            var result = new Api.BaseApi(url, "POST", p).CreateRequestReturnJson();
+            var code = result["status"]["code"].Value<string>();
+            if (code != "0000000")
+            {
+                throw new Exception(result["status"]["msg"].Value<string>());
+            }
         }
     }
 
@@ -326,7 +403,28 @@ namespace CouponClient.MoGuJie
         public int Count { get; set; }
 
         public string DID { get; set; }
-        
 
+
+    }
+
+    public class Channel
+    {
+        public Channel() { }
+
+        public Channel(JObject o)
+        {
+            ID = o["id"].Value<int>();
+            Name = o["name"].Value<string>();
+        }
+
+        public int ID { get; set; }
+
+        public string Name { get; set; }
+
+    }
+
+    public class ChannelUser : Channel
+    {
+        public string UserID { get; set; }
     }
 }
