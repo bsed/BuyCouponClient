@@ -344,7 +344,7 @@ namespace CouponClient.Bll
                 }
                 catch (Exception ex)
                 {
-                    throw ex;
+                    continue;
                 }
 
 
