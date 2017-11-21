@@ -94,7 +94,7 @@ namespace CouponClient
                   .ToList();
                 var mgjChannels = mgj.ChannelGetAll();
                 //获取没有添加渠道的电话号号
-                var noAddProxys = proxys.Where(s => !channels.Any(x => x.Name == s.PhoneNumber)).ToList();
+                var noAddProxys = proxys.Where(s => !mgjChannels.Any(x => x.Name == s.PhoneNumber)).ToList();
                 if (noAddProxys.Count > 0)
                 {
                     foreach (var item in noAddProxys)
@@ -103,7 +103,7 @@ namespace CouponClient
                     }
                     mgjChannels = mgj.ChannelGetAll();
                 }
-                channels = (from c in mgj.ChannelGetAll()
+                channels = (from c in mgjChannels
                             from cu in proxys
                             where c.Name == cu.PhoneNumber
                             select new MoGuJie.ChannelUser
@@ -221,7 +221,6 @@ namespace CouponClient
                                 var result2 = mgj.GetItemList(channels, cid, pageNo: i, pageSize: pageSize);
                                 models.AddRange(result2.Items);
                             }
-
                         }
 
                     }
@@ -253,6 +252,7 @@ namespace CouponClient
 
                 var upload = new Api.BuyUploadApi(files).CreateRequestReturnUrls();
                 var update = new Api.BuyApi("ImportItems", "MoGuJie", new { Url = upload[0] }).CreateRequestReturnBuyResult<object>();
+                onlyFirstPage = true;
                 if (update.State == "Success")
                 {
                     OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbComplated, "蘑菇街提交完成");
