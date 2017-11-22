@@ -50,7 +50,7 @@ namespace CouponClient
                 string testServer = "http://39.108.225.40:21601/";
                 string local = "http://localhost:62209/";
                 string server = "http://www.immlm.cn/";
-                return local;
+                return server;
             }
         }
 
