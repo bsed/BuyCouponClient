@@ -88,7 +88,7 @@ namespace CouponClient
             chrome.DownloadHandler = downloadHandler;
             plChrome.Controls.Add(chrome);
         }
-        
+
 
         private void Chrome_AddressChanged(object sender, AddressChangedEventArgs e)
         {
@@ -203,7 +203,7 @@ namespace CouponClient
                 };
 
                 //获取自己和所有二级代理，今天采集的淘宝券
-                var proxys = Bll.BuyApis.GetProxyCouponCount(UserInfo.ID, Enums.Platform.TaoBao)
+                var proxys = Bll.Buy.GetProxyCouponCount(UserInfo.ID, Enums.Platform.TaoBao)
                     .Where(s => !string.IsNullOrWhiteSpace(s.PhoneNumber)
                         && s.Count < 1000)
                     .ToList();
@@ -267,7 +267,7 @@ namespace CouponClient
             {
                 chrome.Load(txtAddress.Text);
             }
-            if (e.KeyCode== Keys.F12)
+            if (e.KeyCode == Keys.F12)
             {
                 chrome.ShowDevTools();
             }
@@ -315,8 +315,16 @@ namespace CouponClient
                 }
                 catch (Exception ex)
                 {
-                    OnStateChange?.Invoke(Enums.StateLogType.TaoBaoCouponDownloadFail, $"{fileName}处理失败");
-                    SystemBase.WriteLog($"提交失败 {ex.Message}", "UploadTaobao");
+                    try
+                    {
+                        Bll.Buy.LoopCheckCouponUserTemps(dlProxy.ID, Enums.Platform.TaoBao);
+                        OnStateChange?.Invoke(Enums.StateLogType.TaoBaoCouponAddDbComplated, $"代理{dlProxy.PhoneNumber}的{fileName}处理完成");
+                    }
+                    catch (Exception)
+                    {
+                        OnStateChange?.Invoke(Enums.StateLogType.TaoBaoCouponDownloadFail, $"{fileName}处理失败");
+                        SystemBase.WriteLog($"提交失败 {ex.Message}", "UploadTaobao");
+                    }
                 }
             }
             catch (Exception ex)

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CouponClient.Bll
 {
-    public static class BuyApis
+    public static class Buy
     {
         public static Models.BuyUserInfo Login(string userName, string password)
         {
@@ -65,6 +65,56 @@ namespace CouponClient.Bll
             return result;
         }
 
+        /// <summary>
+        /// 在超时时候通过这个来检测是否完成导入
+        /// </summary>
+        /// <param name="userID"></param>
+        /// <param name="p"></param>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        public static bool GetCouponUserTempsCount(string userID, Enums.Platform p, DateTime date)
+        {
+            string strP = null;
+            switch (p)
+            {
+                case Enums.Platform.TaoBao:
+                    strP = "0,1";
+                    break;
+                case Enums.Platform.JD:
+                    strP = "2";
+                    break;
+                case Enums.Platform.MGJ:
+                    strP = "4";
+                    break;
+                default:
+                    break;
+            }
+            var api = new Api.BuyApi("GetCouponUserTempsCount", "Coupon", new
+            {
+                UserID = userID,
+                Platforms = strP,
+                Date = date
+            }, "Get");
+            return api.CreateRequestReturnBuyResult<int>().Result == 0;
+        }
+
+        public static void LoopCheckCouponUserTemps(string userID, Enums.Platform p)
+        {
+            var date = DateTime.Now;
+            bool check = false;
+            int time = 0;
+            do
+            {
+                check = Bll.Buy.GetCouponUserTempsCount(userID, p, date);
+                time++;
+                System.Threading.Thread.Sleep(1000 * 60);
+                if (time > 60)
+                {
+                    throw new Exception("数据未处理完");
+                }
+            } while (!check);
+
+        }
     }
 
 

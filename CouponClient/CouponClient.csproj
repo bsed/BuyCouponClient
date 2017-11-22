@@ -128,7 +128,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppStart\Api.cs" />
-    <Compile Include="AppStart\BuyApis.cs" />
+    <Compile Include="AppStart\Buy.cs" />
     <Compile Include="AppStart\Config.cs" />
     <Compile Include="AppStart\Enums.cs" />
     <Compile Include="AppStart\Extensions\DictionaryExtensions.cs" />

@@ -245,7 +245,7 @@ namespace CouponClient.Bll
 
             };
 
-            var coupTypes = BuyApis.GetJdCouponType();
+            var coupTypes = Buy.GetJdCouponType();
             foreach (var item in _allCids)
             {
                 item.ID = coupTypes
@@ -390,7 +390,16 @@ namespace CouponClient.Bll
             }
             catch (Exception)
             {
-                stateChange(Enums.StateLogType.JdCouponAddDbFail);
+                try
+                {
+                    Bll.Buy.LoopCheckCouponUserTemps(coupon[0].UserID, Enums.Platform.JD);
+                    stateChange(Enums.StateLogType.JdCouponAddDbComplated);
+                }
+                catch (Exception ex)
+                {
+                    stateChange(Enums.StateLogType.JdCouponAddDbFail);
+                }
+               
             }
 
         }

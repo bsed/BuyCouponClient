@@ -129,7 +129,7 @@ namespace CouponClient
         public void InitLoad()
         {
             InitChrome();
-            ProxyUsers = Bll.BuyApis.GetProxyCouponCount(UserInfo.ID, Enums.Platform.JD)
+            ProxyUsers = Bll.Buy.GetProxyCouponCount(UserInfo.ID, Enums.Platform.JD)
                     .Where(s => !string.IsNullOrWhiteSpace(s.PhoneNumber)
                         && s.Count < 1000)
                     .ToList();

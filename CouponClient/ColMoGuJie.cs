@@ -89,7 +89,7 @@ namespace CouponClient
                     RefreshToken = query.Find("#hidRefreshToken").Val<string>(),
                     UserID = query.Find("#hidUserID").Val<string>(),
                 };
-                proxys = Bll.BuyApis.GetProxyCouponCount(UserInfo.ID, Enums.Platform.MGJ)
+                proxys = Bll.Buy.GetProxyCouponCount(UserInfo.ID, Enums.Platform.MGJ)
                   .Where(s => !string.IsNullOrWhiteSpace(s.PhoneNumber))
                   .ToList();
                 var mgjChannels = mgj.ChannelGetAll();
@@ -239,54 +239,69 @@ namespace CouponClient
             {
                 dirInfo.Create();
             }
-
-            var path = $"{Config.RuningPath}\\temp\\蘑菇街_{DateTime.Now:yyyyMMddHHmm}.json";
-            var fileInfo = new System.IO.FileInfo(path);
-            System.IO.File.WriteAllText(path, JsonConvert.SerializeObject(models));
-
-            try
+            foreach (var item in channels)
             {
-                OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbStart, "蘑菇街提交开始");
-                var files = new Dictionary<string, string>();
-                files.Add("file", path);
+                var pModel = models.Where(s => s.UserID == item.UserID).ToList();
+                var path = $"{Config.RuningPath}\\temp\\蘑菇街_{item.Name}_{DateTime.Now:yyyyMMddHHmm}.json";
+                var fileInfo = new System.IO.FileInfo(path);
+                System.IO.File.WriteAllText(path, JsonConvert.SerializeObject(pModel));
 
-                var upload = new Api.BuyUploadApi(files).CreateRequestReturnUrls();
-                var update = new Api.BuyApi("ImportItems", "MoGuJie", new { Url = upload[0] }).CreateRequestReturnBuyResult<object>();
-                onlyFirstPage = true;
-                if (update.State == "Success")
+
+                try
                 {
-                    OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbComplated, "蘑菇街提交完成");
+                    OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbStart, $"蘑菇街 代理{item.Name} 提交开始");
+                    var files = new Dictionary<string, string>();
+                    files.Add("file", path);
+
+                    var upload = new Api.BuyUploadApi(files).CreateRequestReturnUrls();
+                    var update = new Api.BuyApi("ImportItems", "MoGuJie", new { Url = upload[0] }).CreateRequestReturnBuyResult<object>();
+
+                    if (update.State == "Success")
+                    {
+                        OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbComplated, $"蘑菇街 代理{item.Name} 提交完成");
+                        try
+                        {
+                            System.IO.File.Delete(path);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
+                    }
+                    else
+                    {
+                        OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbError, update.Message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        Bll.Buy.LoopCheckCouponUserTemps(item.UserID, Enums.Platform.MGJ);
+                        OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbComplated, $"蘑菇街 代理{item.Name} 提交完成");
+                    }
+                    catch (Exception)
+                    {
+                        OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbError, $"蘑菇街 代理{item.Name} 提交超时");
+                    }
+                   
+                }
+                finally
+                {
                     try
                     {
                         System.IO.File.Delete(path);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-
+                        OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponDeleteTemp, $"蘑菇街 代理{item.Name} 提交有误");
                     }
 
                 }
-                else
-                {
-                    OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbError, update.Message);
-                }
             }
-            catch (Exception ex)
-            {
-                OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponAddDbError, $"蘑菇街提交有误");
-            }
-            finally
-            {
-                try
-                {
-                    System.IO.File.Delete(path);
-                }
-                catch (Exception ex)
-                {
-                    OnStateChange?.Invoke(Enums.StateLogType.MoGuJieCouponDeleteTemp, $"蘑菇街提交有误");
-                }
 
-            }
+            onlyFirstPage = true;
 
             var task = new Task(() =>
             {

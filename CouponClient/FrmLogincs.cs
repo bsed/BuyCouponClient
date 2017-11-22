@@ -59,7 +59,7 @@ namespace CouponClient
         {
             try
             {
-                var user = Bll.BuyApis.Login(userName, password);
+                var user = Bll.Buy.Login(userName, password);
                 var config = Config.ConfigSetting;
                 config.UserName = userName;
                 OnLoginSuccess(user);
